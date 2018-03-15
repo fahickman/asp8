@@ -2,7 +2,7 @@
 ; -------
 ; Display the Fibonacci numbers < 2**11, repeatedly
 
-x:      wrd 100            ; scratch 
+x:      wrd             ; scratch 
 y:      wrd             ; scratch
 
         org @0100
