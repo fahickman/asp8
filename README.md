@@ -20,35 +20,35 @@ argument of the instruction word.
 
 The operation field selects one of the following 15 instructions:
 
-0: ADD
-    Add: A <- A + [operand], Flags()
-1: SUB
-    Subtract: A <- A - [operand], Flags()
-2: RSB
-    Reverse subtract: A <- [operand] - A, Flags()
-3: SHL
-    Shift left: A <- [operand] << 1, Flags()
-4: CMP
-    Compare: [operand] - A, Flags()
-5: LDA
-    Load accumulator: A <- [operand]
-6: STA
-    Store accumulator: [operand] <- A
-7: OUT
-    Output: Display <- [operand]
-8: JMP
-    Jump: PC <- [operand]
-9: JPC
-    Jump if carry: if (Carry) PC <- [operand]
-10: JPN
-    Jump if negative: if (Negative) PC <- [operand]
-11: JMS
+0. ADD
+    Add: `A <- A + [operand], Flags()`
+1. SUB
+    Subtract: `A <- A - [operand], Flags()`
+2. RSB
+    Reverse subtract: `A <- [operand] - A, Flags()`
+3. SHL
+    Shift left: `A <- [operand] << 1, Flags()`
+4. CMP
+    Compare: [operand] - `A, Flags()`
+5. LDA
+    Load accumulator: `A <- [operand]`
+6. STA
+    Store accumulator: `[operand] <- A`
+7. OUT
+    Output: `Display <- [operand]`
+8. JMP
+    Jump: `PC <- [operand]`
+9. JPC
+    Jump if carry: `if (Carry) PC <- [operand]`
+10. JPN
+    Jump if negative: `if (Negative) PC <- [operand]`
+11. JMS
     Jump to subroutine (see below)
-12: NOP
+12. NOP
     No operation
-13: SWP
-    Swap accumulator with memory: A <-> [operand]
-15: HLT
+13. SWP
+    Swap accumulator with memory: `A <-> [operand]`
+15. HLT
     Halt execution
 
 (operation 14 is reserved and functions as NOP.)
@@ -59,9 +59,9 @@ There are two pseudo-instructions that are not implemented by the computer,
 but are instead instructions to the assembler. They are:
 
 * WRD
-   Write a word of memory with the given value (or 0 if no value specified)
+    Write a word of memory with the given value (or 0 if no value specified)
 * ORG
-   Set the memory address of the next instruction
+    Set the memory address of the next instruction
 
 Addressing Modes
 ----------------
@@ -69,20 +69,20 @@ The addressing mode field selects one of the following addressing modes
 ("|" refers to concatenation. HIGH(x) and LOW(x) refer to the upper and
 lower 6 bits of the word x, respectively):
 
-0: Current page
-    operand <- Mem[HIGH(PC)|argument]
-1: Zero page
-    operand <- Mem[argument]
-2: Immediate
-    operand <- argument
-3: Accumulator
-    operand <- Mem[A + argument]
-4: Direct (jump instructions)
-    PC <- HIGH(PC)|argument
-5: Indirect (jump instructions)
-    PC <- MEM[HIGH(PC)|argument]
-6: Indirect zero page (jump instructions)
-    PC <- MEM[argument]
+0. Current page:
+    `operand <- Mem[HIGH(PC)|argument]`
+1. Zero page:
+    `operand <- Mem[argument]`
+2. Immediate:
+    `operand <- argument`
+3. Accumulator:
+    `operand <- Mem[A + argument]`
+4. Direct (jump instructions):
+    `PC <- HIGH(PC)|argument`
+5. Indirect (jump instructions):
+    `PC <- MEM[HIGH(PC)|argument]`
+6. Indirect zero page (jump instructions):
+    `PC <- MEM[argument]`
 
 The assembler will select the appropriate addressing mode based on the
 instruction type and format of the argument given (see "Arguments" below).
@@ -90,45 +90,42 @@ instruction type and format of the argument given (see "Arguments" below).
 Arguments
 ---------
 Instruction arguments take one of the following forms:
-* Immediate value: #
-   examples:
-
+* Immediate value:
+    Use `#` to specify an immediate value between 0 and 63:
+    ```
     LDA #05    ; load the value 5 into A
     JPC #01    ; jump to word 1 in the current page if the carry flag is set
-    ADD #x     ; add the address of the variable x to A
-
+    ADD #x     ; add the address of the variable x in the current page to A 
+    ```
 * Absolute address:
-      An absolute address must either be in page 0, or in the same page as the
-   current instruction.
-   examples:
-
+    An absolute address must either be in page 0, or in the same page as the
+    current instruction.
+    ```
     LDA @1455   ; load the value in memory address 1455 octal
-    STA $13     ; load the accumulator in memory address 13 hexadecimal
+    STA $13     ; store the accumulator into memory address 13 hex
     ADD x       ; add the contents of location x to A
-
- Indirect address:
-   A jump instruction can reference a memory location with contains the
-   address to jump to.
-   examples:
-
+    ```
+* Direct address:
+    Specifies a location in either the current page or page 0 to jump to.
+    ```
+    JMP loop    ; jump to location "loop" if it is reachable
+    ```
+* Indirect address:
+    A jump instruction can reference a memory location with contains the
+    address to jump to.
+    ```
     JMP [@02]   ; jump to location stored in memory address 2
     JPC [x]     ; jump to address stored in the variable x if carry is set
-
-* Direct address:
-   Specifies a location in either the current page or page 0 to jump to
-   examples:
-
-    JMP loop    ; jump to location "loop" if it is reachable
-
+    ```
 * Accumulator:
-   The contents of the accumulator plus a given offset are used to calculate an
-   address that contains the data for the instruction.
-   examples:
-
+    The contents of the accumulator plus a given offset are used to calculate an
+    address that contains the data for the instruction.
+    ```
     LDA A+#03   ; A <- Mem[A + 3]
-      
-For immediate and absolute arguments, values starting with @ are in octal,
-and values starting with $ are hexadecimal.
+    ```
+
+For immediate and absolute arguments, values starting with '@' are in octal,
+and values starting with '$' are hexadecimal.
 
 Jump To Subroutine
 ------------------
