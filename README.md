@@ -48,10 +48,9 @@ The operation field selects one of the following 15 instructions:
     No operation
 13. SWP
     Swap accumulator with memory: `A <-> [operand]`
+14. (Reserved.)
 15. HLT
     Halt execution
-
-(operation 14 is reserved and functions as NOP.)
 
 Assembler Instructions
 ----------------------
@@ -99,7 +98,6 @@ Instruction arguments take one of the following forms:
     Use `#` to specify an immediate value between 0 and 63:
     ```
     LDA #05    ; load the value 5 into A
-    JPC #01    ; jump to word 1 in the current page if the carry flag is set
     ADD #x     ; add the address of the variable x in the current page to A 
     ```
 * Absolute address:
@@ -114,6 +112,7 @@ Instruction arguments take one of the following forms:
     Specifies a location in either the current page or page 0 to jump to.
     ```
     JMP loop    ; jump to location "loop" if it is reachable
+    JPC 1       ; jump to word 1 in the current page if the carry flag is set
     ```
 * Indirect address:
     The specified memory location contains the address of the operand for the
@@ -166,7 +165,6 @@ indirect addressing. For example:
              ...
              LDA [dataptr] ; load the value in memory address "ptr" (@7700) into A
                            ; A now holds the value @1777
-
 
 The Assembler
 ------------

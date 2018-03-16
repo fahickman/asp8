@@ -357,6 +357,9 @@ fn parse_line(text: &str, address: u16, symbols: &mut SymbolTable) -> Result<Opc
       operand = parse_operand(&token[1..token.len()-1], symbols)?;
     } else if token.starts_with('#') {
       // immediate
+      if inst_is_jump(instruction) {
+         return Err(AsmError::InvalidAddressing);
+      }
       addressing = Addressing::Immediate;
       operand = parse_operand(&token[1..], symbols)?;
    } else if token.starts_with("A+") || token.starts_with("a+") {
