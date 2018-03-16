@@ -20,25 +20,25 @@ argument of the instruction word.
 
 The operation field selects one of the following 15 instructions:
 
-0. ADD
+0.  ADD
     Add: `A <- A + [operand], Flags()`
-1. SUB
+1.  SUB
     Subtract: `A <- A - [operand], Flags()`
-2. RSB
+2.  RSB
     Reverse subtract: `A <- [operand] - A, Flags()`
-3. SHL
+3.  SHL
     Shift left: `A <- [operand] << 1, Flags()`
-4. CMP
+4.  CMP
     Compare: [operand] - `A, Flags()`
-5. LDA
+5.  LDA
     Load accumulator: `A <- [operand]`
-6. STA
+6.  STA
     Store accumulator: `[operand] <- A`
-7. OUT
+7.  OUT
     Output: `Display <- [operand]`
-8. JMP
+8.  JMP
     Jump: `PC <- [operand]`
-9. JPC
+9.  JPC
     Jump if carry: `if (Carry) PC <- [operand]`
 10. JPN
     Jump if negative: `if (Negative) PC <- [operand]`
@@ -65,9 +65,9 @@ but are instead instructions to the assembler. They are:
 
 Addressing Modes
 ----------------
-The addressing mode field selects one of the following addressing modes
-("|" refers to concatenation. HIGH(x) and LOW(x) refer to the upper and
-lower 6 bits of the word x, respectively):
+For non-jump instructions, the addressing mode field selects one of the
+following addressing modes ("|" refers to concatenation. HIGH(x) and LOW(x)
+refer to the upper and lower 6 bits of the word x, respectively):
 
 0. Current page:
     `operand <- Mem[HIGH(PC)|argument]`
@@ -75,14 +75,19 @@ lower 6 bits of the word x, respectively):
     `operand <- Mem[argument]`
 2. Immediate:
     `operand <- argument`
-3. Accumulator:
-    `operand <- Mem[A + argument]`
-4. Direct (jump instructions):
-    `PC <- HIGH(PC)|argument`
-5. Indirect (jump instructions):
+3. Indirect:
     `PC <- MEM[HIGH(PC)|argument]`
-6. Indirect zero page (jump instructions):
+
+Jump instructions use the following addressing modes:
+
+0. Direct:
+    `PC <- HIGH(PC)|argument`
+1. Indirect current page:
+    `PC <- MEM[HIGH(PC)|argument]`
+2. Indirect zero page:
     `PC <- MEM[argument]`
+3. Accumulator:
+    `PC <- A + argument`
 
 The assembler will select the appropriate addressing mode based on the
 instruction type and format of the argument given (see "Arguments" below).
@@ -111,17 +116,18 @@ Instruction arguments take one of the following forms:
     JMP loop    ; jump to location "loop" if it is reachable
     ```
 * Indirect address:
-    A jump instruction can reference a memory location with contains the
-    address to jump to.
+    The specified memory location contains the address of the operand for the
+    instruction.
     ```
     JMP [@02]   ; jump to location stored in memory address 2
+    STA [4]     ; Store A to the address stored at offset 4 in the current page
     JPC [x]     ; jump to address stored in the variable x if carry is set
     ```
 * Accumulator:
     The contents of the accumulator plus a given offset are used to calculate an
     address that contains the data for the instruction.
     ```
-    LDA A+#03   ; A <- Mem[A + 3]
+    JMP A+#03   ; PC <- A + 3
     ```
 
 For immediate and absolute arguments, values starting with '@' are in octal,
@@ -139,6 +145,9 @@ For example, a subroutine can be written in assembly language as follows:
             ...             ; procedure statements follow
             JMP [myproc]    ; return to caller
 
+*Note: Using indirect addressing with the JMS instruction will destroy the
+contents of the A register.*
+
 Memory Pages
 ------------
 The ASP-8 is divided into 64 pages of 64 bytes each. An instruction can
@@ -146,16 +155,17 @@ reference memory in either page zero (zero page addressing) or in the same
 page as the instruction (current page addressing). The assembler will select
 the appropriate addressing mode for each instruction based on its argument.
 
-Data in pages other than the current and zero page can be referenced via a
-two-step loading process. First, by loading the address into A via a pointer in
-either the current or zero page, then an accumulator-based load to load the
-data at that address. For example:
+Data in pages other than the current and zero page can be referenced via
+indirect addressing. For example:
+
+         ORG @7700 ; set current page to @77
+         WRD @1777 ; value we are interested in
 
          ORG @0100 ; set current page to 01, making page @77 unavailable
-    ptr: WRD @7700 ; the address we are interested in
+    ptr: WRD @7700 ; the address of the value we are interested in
          ...
-         LDA ptr   ; load the value in ptr (@7700) into A
-         LDA A+#04 ; load the data at location @7704 into A
+         LDA [ptr] ; load the value in memory address "ptr" (@7700) into A
+                   ; A now holds the value @1777
 
 The Assembler
 ------------

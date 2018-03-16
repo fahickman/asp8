@@ -53,12 +53,13 @@ enum Addressing {
    CurrentPage,
    ZeroPage,
    Immediate,
-   Accumulator,
+   Indirect,
 
    // jump instructions only
-   Direct,
-   Indirect,
+   IndirectCurrentPage,
    IndirectZeroPage,
+   Direct,
+   Accumulator,
 
    // WRD and ORG instructions only
    Assembler,
@@ -217,10 +218,13 @@ fn opcode_to_int(op: &Opcode) -> u16 {
       Addressing::CurrentPage => 0o000,
       Addressing::ZeroPage    => 0o100,
       Addressing::Immediate   => 0o200,
-      Addressing::Accumulator => 0o300,
-      Addressing::Direct      => 0o200,
-      Addressing::Indirect    => 0o000,
-      Addressing::IndirectZeroPage => 0o100,
+      Addressing::Indirect    => 0o300,
+
+      Addressing::IndirectCurrentPage  => 0o000,
+      Addressing::IndirectZeroPage     => 0o100,
+      Addressing::Direct               => 0o200,
+      Addressing::Accumulator          => 0o300,
+
       Addressing::Assembler   => 0o000,
    };
 
@@ -349,10 +353,7 @@ fn parse_line(text: &str, address: u16, symbols: &mut SymbolTable) -> Result<Opc
       if !token.ends_with(']') {
          return Err(AsmError::MissingRightBracket);
       }
-      if !inst_is_jump(instruction) {
-         return Err(AsmError::InvalidAddressing);
-      }
-      addressing = Addressing::Indirect;
+      addressing = if inst_is_jump(instruction) { Addressing::IndirectCurrentPage } else { Addressing::Indirect };
       operand = parse_operand(&token[1..token.len()-1], symbols)?;
     } else if token.starts_with('#') {
       // immediate
@@ -360,12 +361,11 @@ fn parse_line(text: &str, address: u16, symbols: &mut SymbolTable) -> Result<Opc
       operand = parse_operand(&token[1..], symbols)?;
    } else if token.starts_with("A+") || token.starts_with("a+") {
       // accumulator
-      addressing = Addressing::Accumulator;
-      if token[1..].starts_with('+') {
-         operand = parse_operand(&token[2..], symbols)?;
-      } else {
-         operand = Operand::Literal(0);
+      if !inst_is_jump(instruction) {
+         return Err(AsmError::InvalidAddressing);
       }
+      addressing = Addressing::Accumulator;
+      operand = parse_operand(&token[2..], symbols)?;
    } else {
       // direct/current page, possibly changing to zero-page once references are resolved
       addressing = if inst_is_jump(instruction) { Addressing::Direct } else { Addressing::CurrentPage };
@@ -435,23 +435,28 @@ fn assemble_line(l: &Line, symbols: &SymbolTable) -> Result<(), AsmError> {
             return Err(AsmError::ArgumentTooLarge(arg));
          }
       },
-      Addressing::Direct => {
-         if (arg >> 6) != (l.org >> 6) {
-            return Err(AsmError::BranchTargetOutOfRange(arg));
+      Addressing::CurrentPage => {
+         if (arg >> 6) == 0 {
+            op.addressing = Addressing::ZeroPage;
+         } else if (arg >> 6) != (l.org >> 6) {
+            return Err(AsmError::LocationUnreachable(arg));
          }
       },
       Addressing::Indirect => {
+         if (arg >> 6) != (l.org >> 6) {
+            return Err(AsmError::LocationUnreachable(arg));
+         }
+      },
+      Addressing::IndirectCurrentPage => {
          if (arg >> 6) == 0 {
             op.addressing = Addressing::IndirectZeroPage;
          } else if (arg >> 6) != (l.org >> 6) {
             return Err(AsmError::BranchTargetOutOfRange(arg));
          }
       },
-      Addressing::CurrentPage => {
-         if (arg >> 6) == 0 {
-            op.addressing = Addressing::ZeroPage;
-         } else if (arg >> 6) != (l.org >> 6) {
-            return Err(AsmError::LocationUnreachable(arg));
+      Addressing::Direct => {
+         if (arg >> 6) != (l.org >> 6) {
+            return Err(AsmError::BranchTargetOutOfRange(arg));
          }
       },
       _ => (),
@@ -480,12 +485,13 @@ fn assemble_line(l: &Line, symbols: &SymbolTable) -> Result<(), AsmError> {
    };
 
    match op.addressing {
-      Addressing::Immediate         => println!("{:04o}: {:04o} ; {} #{:02}",    l.org, opcode, name, arg),
-      Addressing::Accumulator       => println!("{:04o}: {:04o} ; {} A+{:02o}",  l.org, opcode, name, arg),
-      Addressing::ZeroPage          => println!("{:04o}: {:04o} ; {} @{:02o}",   l.org, opcode, name, arg),
-      Addressing::Indirect          => println!("{:04o}: {:04o} ; {} [@{:04o}]", l.org, opcode, name, arg),
-      Addressing::IndirectZeroPage  => println!("{:04o}: {:04o} ; {} [@{:02o}]", l.org, opcode, name, arg),
-      _                             => println!("{:04o}: {:04o} ; {} @{:04o}",   l.org, opcode, name, arg),
+      Addressing::Immediate           => println!("{:04o}: {:04o} ; {} #{:02}",    l.org, opcode, name, arg),
+      Addressing::Accumulator         => println!("{:04o}: {:04o} ; {} A+{:02o}",  l.org, opcode, name, arg),
+      Addressing::ZeroPage            => println!("{:04o}: {:04o} ; {} @{:02o}",   l.org, opcode, name, arg),
+      Addressing::Indirect            => println!("{:04o}: {:04o} ; {} [@{:04o}]", l.org, opcode, name, arg),
+      Addressing::IndirectCurrentPage => println!("{:04o}: {:04o} ; {} [@{:04o}]", l.org, opcode, name, arg),
+      Addressing::IndirectZeroPage    => println!("{:04o}: {:04o} ; {} [@{:02o}]", l.org, opcode, name, arg),
+      _                               => println!("{:04o}: {:04o} ; {} @{:04o}",   l.org, opcode, name, arg),
    }
 
    Ok(())

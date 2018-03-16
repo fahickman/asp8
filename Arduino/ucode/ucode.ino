@@ -24,10 +24,10 @@
 // 74 HLT: Halt execution
 
 // addressing modes
-// 0 current page
-// 1 zero page
-// 2 immediate
-// 3 accumulator
+// 0 (indirect) current page
+// 1 (indirect) zero page
+// 2 direct/immediate
+// 3 accumulator/indirect
 
 // ucode signals
 // BANK 0
@@ -68,8 +68,8 @@
 #define U_FE1 (U_MEO | U_IRI | U_PCE)  // fetch 1: I <- RAM[M]
 #define U_CUP (U_PHO | U_IRO | U_MRI)  // current-page addressing:  M <- HIGH(PC)|LOW(I)
 #define U_ZEP (U_IRO | U_MRI)          // zero-page addressing:     M <- 0|LOW(I)
-#define U_AC0 (U_IRO | U_BRI)          // accumulator addressing 0: B <- LOW(I)
-#define U_AC1 (U_SUO | U_MRI)          // accumulator addressing 1: M <- A + B
+#define U_ID0 (U_PHO | U_IRO | U_MRI)  // indirect addressing 0:    M <- HIGH(PC)|LOW(I)
+#define U_ID1 (U_MEO | U_MRI)          // indirect addressing 1:    M <- RAM[M]
 
 PROGMEM static const unsigned long isa[64][8] = {
       { // 000: ADDc
@@ -92,11 +92,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_IRO | U_BRI,
       U_SUO | U_ARI | U_FRI,
       U_END
-   }, { // 003: ADDa
+   }, { // 003: ADDn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_MEO | U_BRI,
       U_SUO | U_ARI | U_FRI,
       U_END
@@ -120,13 +120,12 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_IRO | U_BRI,
       U_SUO | U_SUB | U_ARI | U_FRI,
       U_END
-   }, { // 007: SUBa
+   }, { // 007: SUBn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
-      U_ARO | U_BRI,
-      U_MEO | U_ARI,
+      U_ID0,
+      U_ID1,
+      U_MEO | U_BRI,
       U_SUO | U_SUB | U_ARI | U_FRI,
       U_END
    }, { // 010: RSBc
@@ -152,11 +151,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_IRO | U_ARI,
       U_SUO | U_SUB | U_ARI | U_FRI,
       U_END
-   }, { // 013: RSBa
+   }, { // 013: RSBn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_ARO | U_BRI,
       U_MEO | U_ARI,
       U_SUO | U_SUB | U_ARI | U_FRI,
@@ -181,11 +180,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_IRO | U_ARI | U_BRI,
       U_SUO | U_ARI | U_FRI,
       U_END
-   }, { // 017: SHLa
+   }, { // 017: SHLn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_MEO | U_ARI | U_BRI,
       U_SUO | U_ARI | U_FRI,
       U_END
@@ -209,11 +208,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_IRO | U_BRI,
       U_SUB | U_FRI,
       U_END
-   }, { // 023: CMPa
+   }, { // 023: CMPn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_MEO | U_BRI,
       U_SUB | U_FRI,
       U_END
@@ -234,11 +233,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_FE1,
       U_IRO | U_ARI,
       U_END
-   }, { // 027: LDAa
+   }, { // 027: LDAn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_MEO, U_ARI,
       U_END,
    }, { // 030: STAc
@@ -259,11 +258,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_CUP,
       U_ARO | U_MEI,
       U_END,
-   }, { // 033: STAa
+   }, { // 033: STAn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_ARO | U_MEI,
       U_END
    }, { // 034: OUTc
@@ -283,11 +282,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_FE1,
       U_IRO | U_OUT,
       U_END
-   }, { // 037: OUTa
+   }, { // 037: OUTn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_MEO | U_OUT,
       U_END
    }, { // 040: JMPc
@@ -310,9 +309,8 @@ PROGMEM static const unsigned long isa[64][8] = {
    }, { // 043: JMPa
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
-      U_MEO | U_JMP,
+      U_IRO | U_BRI,
+      U_SUO | U_JMP,
       U_END
    }, { // 044: JPCc
       U_FE0,
@@ -334,9 +332,8 @@ PROGMEM static const unsigned long isa[64][8] = {
    }, { // 047: JPCa
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
-      U_MEO | U_JPC,
+      U_IRO | U_BRI,
+      U_SUO | U_JPC,
       U_END
    }, { // 050: JPNc
       U_FE0,
@@ -358,45 +355,45 @@ PROGMEM static const unsigned long isa[64][8] = {
    }, { // 053: JPNa
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
-      U_MEO | U_JPN,
+      U_IRO | U_BRI,
+      U_SUO | U_JPN,
       U_END
    }, { // 050: JMSc
       U_FE0,
       U_FE1,
       U_CUP,
-      U_MEO | U_MRI,
+      U_MEO | U_MRI | U_ARI,
       U_PCO | U_MEI,
-      U_MRO | U_PCI,
+      U_ARO | U_JMP,
       U_PCE,
-      U_END
+      U_END,
    }, { // 051: JMSz
       U_FE0,
       U_FE1,
       U_ZEP,
-      U_MEO | U_MRI,
+      U_MEO | U_MRI | U_ARI,
       U_PCO | U_MEI,
-      U_MRO | U_PCI,
+      U_ARO | U_JMP,
       U_PCE,
-      U_END
+      U_END,
    }, { // 052: JMSi
       U_FE0,
       U_FE1,
-      U_IRO | U_PHO | U_MRI,
+      U_ARO | U_BRI,
+      U_IRO | U_PHO | U_MRI | U_ARI,
       U_PCO | U_MEI,
-      U_MRO | U_PCI,
-      U_PCE,
-      U_END
+      U_ARO | U_JMP,
+      U_ZEO | U_ARI | U_PCE,
+      U_SUO | U_ARI
    }, { // 053: JMSa
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
-      U_MEO | U_MRI,
+      U_IRO | U_BRI,
+      U_SUO | U_MRI | U_ARI,
       U_PCO | U_MEI,
-      U_MRO | U_PCI,
-      U_PCE,
+      U_ARO | U_JMP,
+      U_SUO | U_SUB | U_ARI | U_PCE,
+      U_END,
    }, { // 060: NOPc
       U_FE0,
       U_FE1,
@@ -411,11 +408,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_FE0,
       U_FE1,
       U_END
-   }, { // 063: NOPa
+   }, { // 063: NOPn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_END
    }, { // 064: SWPc
       U_FE0,
@@ -440,11 +437,11 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_FE1,
       U_IRO | U_ARI,
       U_END
-   }, { // 067: SWPa
+   }, { // 067: SWPn
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_MEO | U_BRI,
       U_ARO | U_MEI,
       U_ZEO | U_ARI,
@@ -463,27 +460,31 @@ PROGMEM static const unsigned long isa[64][8] = {
       U_FE0,
       U_FE1,
       U_END
-   }, { // 073: ---a
+   }, { // 073: ---n
       U_FE0,
       U_FE1,
-      U_AC0,
-      U_AC1,
+      U_ID0,
+      U_ID1,
       U_END
    }, { // 074: HLTc
       U_FE0,
       U_FE1,
+      U_CUP,
       U_HLT
    }, { // 075: HLTz
       U_FE0,
       U_FE1,
+      U_ZEP,
       U_HLT
    }, { // 076: HLTi
       U_FE0,
       U_FE1,
       U_HLT
-   }, { // 077: HLTa
+   }, { // 077: HLTn
       U_FE0,
       U_FE1,
+      U_ID0,
+      U_ID1,
       U_HLT
    },
 };
