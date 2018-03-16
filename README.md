@@ -158,14 +158,15 @@ the appropriate addressing mode for each instruction based on its argument.
 Data in pages other than the current and zero page can be referenced via
 indirect addressing. For example:
 
-         ORG @7700 ; set current page to @77
-         WRD @1777 ; value we are interested in
+             ORG @7700     ; set current page to @77
+    data:    WRD @1777     ; value we are interested in
 
-         ORG @0100 ; set current page to 01, making page @77 unavailable
-    ptr: WRD @7700 ; the address of the value we are interested in
-         ...
-         LDA [ptr] ; load the value in memory address "ptr" (@7700) into A
-                   ; A now holds the value @1777
+             ORG @0100     ; set current page to 01, making page @77 unavailable
+    dataptr: WRD data      ; the address of the value we are interested in
+             ...
+             LDA [dataptr] ; load the value in memory address "ptr" (@7700) into A
+                           ; A now holds the value @1777
+
 
 The Assembler
 ------------
